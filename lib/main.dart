@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import './selectScreen.dart';
-import './game.dart';
 
 void main() => runApp(MyApp());
 

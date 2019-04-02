@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import './game.dart';
+import './config.dart';
 
 class GameTypeSelect extends StatelessWidget {
   final TextStyle _headingStyle = new TextStyle(
@@ -92,7 +93,80 @@ class GameTypeSelect extends StatelessWidget {
   }
 
   void _navigateToGame(bool isDoublePlayer, BuildContext context) {
+    Widget navigateTo =
+        isDoublePlayer ? GameScreen(isDoublePlayer, null) : IconSelect();
     Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => GameScreen(isDoublePlayer)));
+      MaterialPageRoute(builder: (context) => navigateTo),
+    );
+  }
+}
+
+class IconSelect extends StatelessWidget {
+  final double _headerIonSize = 70;
+  final TextStyle _headingStyle = new TextStyle(
+    color: Colors.white,
+    fontSize: 50,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+      ),
+      body: Container(
+        padding: EdgeInsets.all(40),
+        color: Theme.of(context).primaryColor,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              'Selet You Icon',
+              style: _headingStyle,
+              textAlign: TextAlign.center,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      _selectIcon(1, context);
+                    },
+                    child: Icon(
+                      Config.icons['cross'],
+                      size: _headerIonSize,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      _selectIcon(2, context);
+                    },
+                    child: Icon(
+                      Config.icons['circle'],
+                      size: _headerIonSize,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectIcon(int i, BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => GameScreen(false, i)),
+    );
   }
 }

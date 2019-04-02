@@ -1,39 +1,48 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:async';
 
 import './config.dart';
 
 class GameScreen extends StatefulWidget {
   final bool isDoublePlayer;
-  GameScreen(this.isDoublePlayer);
+  final int selectedPlayer;
+  GameScreen(this.isDoublePlayer, this.selectedPlayer);
 
   @override
   _GameScreenState createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> {
-  List<List> _data = [
-    [
-      0,
-      0,
-      0,
-    ],
-    [
-      0,
-      0,
-      0,
-    ],
-    [
-      0,
-      0,
-      0,
-    ],
-  ];
-  List<int> _points = [0, 0];
-  int _currentUser = 1;
+  List<List> _data;
+  List<int> _points;
+  int _currentUser;
+  bool _dontListenClick;
 
   double _iconSize = 50;
   double _headerIonSize = 70;
+
+  int _computerIcon;
+  var _timer1;
+  var _timer2;
+
+  @override
+  void initState() {
+    _resetGame();
+    super.initState();
+  }
+
+  @override
+  void deactivate() {
+    if (_timer1 != null && _timer1.isActive) {
+      _timer1.cancel();
+    }
+
+    if (_timer2 != null && _timer2.isActive) {
+      _timer2.cancel();
+    }
+    super.deactivate();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +89,9 @@ class _GameScreenState extends State<GameScreen> {
                   : null,
               child: Column(
                 children: <Widget>[
-                  _currentUser == 1 ? Text('Your Turn') : Text(''),
+                  _currentUser == 1 && _computerIcon == 1
+                      ? Text('Computer\'s Turn')
+                      : _currentUser == 1 ? Text('Your Turn') : Text(''),
                   Icon(
                     Config.icons['cross'],
                     size: _headerIonSize,
@@ -111,7 +122,9 @@ class _GameScreenState extends State<GameScreen> {
                   : null,
               child: Column(
                 children: <Widget>[
-                  _currentUser == 2 ? Text('Your Turn') : Text(''),
+                  _currentUser == 2 && _computerIcon == 2
+                      ? Text('Computer\'s Turn')
+                      : _currentUser == 2 ? Text('Your Turn') : Text(''),
                   Icon(
                     Config.icons['circle'],
                     size: _headerIonSize,
@@ -175,31 +188,38 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildActions() {
-    return ButtonBar(
-      alignment: MainAxisAlignment.center,
-      children: <Widget>[
-        MaterialButton(
-          color: Colors.blue,
-          highlightColor: Colors.blueAccent,
-          minWidth: 100,
-          height: 45,
-          child: Text(
-            'Reset',
-            style: TextStyle(color: Colors.white),
-          ),
-          onPressed: () {
-            _resetGame();
-          },
-        )
-      ],
+    return Container(
+      margin: EdgeInsets.only(top: 5),
+      child: ButtonBar(
+        alignment: MainAxisAlignment.center,
+        children: <Widget>[
+          MaterialButton(
+            color: Colors.blue,
+            highlightColor: Colors.blueAccent,
+            minWidth: 100,
+            height: 45,
+            child: Text(
+              'Reset',
+              style: TextStyle(color: Colors.white),
+            ),
+            onPressed: () {
+              _resetGame();
+            },
+          )
+        ],
+      ),
     );
   }
 
   void _clickedBox(int index1, int index2) {
+    if (_dontListenClick == null || _dontListenClick) {
+      return;
+    }
+
     if (_data[index1][index2] == 0) {
       setState(() {
         _data[index1][index2] = _currentUser;
-        if (_checkWin()) {
+        if (_checkWin(_data)) {
           _handlePlayerWin();
         } else if (_checkFilled()) {
           _resetBoard();
@@ -212,6 +232,9 @@ class _GameScreenState extends State<GameScreen> {
 
   void _switchUser() {
     _currentUser = _currentUser == 1 ? 2 : 1;
+    if (!widget.isDoublePlayer && _currentUser == _computerIcon) {
+      _computerTurn();
+    }
   }
 
   void _resetBoard() {
@@ -235,7 +258,12 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ];
       _currentUser = randomGenerator.nextInt(2) + 1;
+      _dontListenClick = false;
+      _computerIcon = widget.selectedPlayer == 1 ? 2 : 1;
     });
+    if (!widget.isDoublePlayer && _currentUser == _computerIcon) {
+      _computerTurn();
+    }
   }
 
   void _resetPoints() {
@@ -251,8 +279,14 @@ class _GameScreenState extends State<GameScreen> {
 
   void _handlePlayerWin() {
     setState(() {
-      _points[_currentUser - 1]++;
-      _resetBoard();
+      _dontListenClick = true;
+    });
+    _timer1 = new Timer(new Duration(milliseconds: 500), () {
+      setState(() {
+        _points[_currentUser - 1]++;
+        _resetBoard();
+        _dontListenClick = false;
+      });
     });
   }
 
@@ -266,26 +300,26 @@ class _GameScreenState extends State<GameScreen> {
     return true;
   }
 
-  bool _checkWin() {
+  bool _checkWin(List _newData) {
     bool flag = false;
     List<int> rdiag = [];
     List<int> ldiag = [];
     for (var i = 0; i < 3; i++) {
       bool rowFlag = true;
-      int rowUser = _data[i][0];
+      int rowUser = _newData[i][0];
       bool colFlag = true;
-      int colUser = _data[0][i];
+      int colUser = _newData[0][i];
 
       for (var j = 0; j < 3; j++) {
-        if (rowUser != _data[i][j]) rowFlag = false;
-        if (colUser != _data[j][i]) colFlag = false;
+        if (rowUser != _newData[i][j]) rowFlag = false;
+        if (colUser != _newData[j][i]) colFlag = false;
 
         if (i == j) {
-          ldiag.add(_data[i][j]);
+          ldiag.add(_newData[i][j]);
         }
 
         if (i + j == 2) {
-          rdiag.add(_data[i][j]);
+          rdiag.add(_newData[i][j]);
         }
       }
 
@@ -312,6 +346,81 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     return flag;
+  }
+
+  void _computerTurn() {
+    List<List<int>> possibleMoves = [];
+    bool flag = false;
+    setState(() {
+      _dontListenClick = true;
+    });
+
+    for (var i = 0; i < 3; i++) {
+      for (var j = 0; j < 3; j++) {
+        if (_data[i][j] == 0) {
+          List _newData = _cloneData();
+          _newData[i][j] = _computerIcon;
+          possibleMoves.add([i, j]);
+          if (_checkWin(_newData)) {
+            _playComputerTurn(i, j);
+            flag = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!flag) {
+      var randomGenerator = new Random();
+      int index = randomGenerator.nextInt(possibleMoves.length);
+      setState(() {
+        _playComputerTurn(possibleMoves[index][0], possibleMoves[index][1]);
+      });
+    }
+  }
+
+  void _playComputerTurn(int index1, int index2) {
+    _timer2 = new Timer(new Duration(milliseconds: 500), () {
+      setState(() {
+        _data[index1][index2] = _computerIcon;
+        _dontListenClick = false;
+      });
+      if (_checkWin(_data)) {
+        _handlePlayerWin();
+      } else if (_checkFilled()) {
+        _resetBoard();
+      } else {
+        _switchUser();
+      }
+    });
+  }
+
+  List _cloneData() {
+    List<List> _newData = [
+      [
+        0,
+        0,
+        0,
+      ],
+      [
+        0,
+        0,
+        0,
+      ],
+      [
+        0,
+        0,
+        0,
+      ],
+    ];
+
+    for (var i = 0; i < 3; i++) {
+      for (var j = 0; j < 3; j++) {
+        _newData[i][j] = _data[i][j];
+      }
+    }
+
+    return _newData;
   }
 
   BoxBorder _getBorder(int index1, int index2) {
