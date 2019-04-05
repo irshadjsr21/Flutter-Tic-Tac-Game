@@ -259,7 +259,9 @@ class _GameScreenState extends State<GameScreen> {
       ];
       _currentUser = randomGenerator.nextInt(2) + 1;
       _dontListenClick = false;
-      _computerIcon = widget.selectedPlayer == 1 ? 2 : 1;
+      _computerIcon = widget.selectedPlayer == 1
+          ? 2
+          : widget.selectedPlayer == 2 ? 1 : null;
     });
     if (!widget.isDoublePlayer && _currentUser == _computerIcon) {
       _computerTurn();
@@ -350,7 +352,9 @@ class _GameScreenState extends State<GameScreen> {
 
   void _computerTurn() {
     List<List<int>> possibleMoves = [];
-    bool flag = false;
+    Map<String, int> computerWinMove = {'1': null, '2': null};
+    Map<String, int> userWinMove = {'1': null, '2': null};
+
     setState(() {
       _dontListenClick = true;
     });
@@ -358,24 +362,34 @@ class _GameScreenState extends State<GameScreen> {
     for (var i = 0; i < 3; i++) {
       for (var j = 0; j < 3; j++) {
         if (_data[i][j] == 0) {
-          List _newData = _cloneData();
-          _newData[i][j] = _computerIcon;
+          List _compData = _cloneData();
+          List _userData = _cloneData();
+
+          _compData[i][j] = _computerIcon;
+          _userData[i][j] = _computerIcon == 1 ? 2 : 1;
+
           possibleMoves.add([i, j]);
-          if (_checkWin(_newData)) {
-            _playComputerTurn(i, j);
-            flag = true;
-            break;
+
+          if (_checkWin(_compData)) {
+            computerWinMove['1'] = i;
+            computerWinMove['2'] = j;
+          }
+          if (_checkWin(_userData)) {
+            userWinMove['1'] = i;
+            userWinMove['2'] = j;
           }
         }
       }
     }
 
-    if (!flag) {
+    if (computerWinMove['1'] != null) {
+      _playComputerTurn(computerWinMove['1'], computerWinMove['2']);
+    } else if (userWinMove['1'] != null) {
+      _playComputerTurn(userWinMove['1'], userWinMove['2']);
+    } else {
       var randomGenerator = new Random();
       int index = randomGenerator.nextInt(possibleMoves.length);
-      setState(() {
-        _playComputerTurn(possibleMoves[index][0], possibleMoves[index][1]);
-      });
+      _playComputerTurn(possibleMoves[index][0], possibleMoves[index][1]);
     }
   }
 
